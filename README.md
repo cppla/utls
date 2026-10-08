@@ -1,7 +1,11 @@
 # ![uTLS](logo_small.png) uTLS
-[![Build Status](https://github.com/refraction-networking/utls/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/refraction-networking/utls/actions/workflows/go.yml) 
+[![Build Status](https://github.com/cppla/utls/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/cppla/utls/actions/workflows/go.yml)
 [![godoc](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/refraction-networking/utls#UConn)
 ---
+This is the **AutoCAR-maintained fork**, not the upstream release. See
+[FORK.md](FORK.md) for the exact upstream baseline, local compatibility patches,
+module identity, testing requirements, and security-maintenance limitations.
+
 uTLS is a fork of "crypto/tls", which provides ClientHello fingerprinting resistance, low-level access to handshake, fake session tickets and some other features. Handshake is still performed by "crypto/tls", this library merely changes ClientHello part of it and provides low-level access.  
 
 **Minimum Go Version**: Go 1.27
