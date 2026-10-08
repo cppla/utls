@@ -56,7 +56,11 @@ func (q *UQUICConn) Start(ctx context.Context) error {
 }
 
 func (q *UQUICConn) ApplyPreset(p *ClientHelloSpec) error {
-	return q.conn.ApplyPreset(p)
+	if err := q.conn.ApplyPreset(p); err != nil {
+		return err
+	}
+	q.syncTransportParameters()
+	return nil
 }
 
 // NextEvent returns the next event occurring on the connection.
@@ -90,6 +94,7 @@ func (q *UQUICConn) Close() error {
 		return nil // never started
 	}
 	q.conn.quic.cancel()
+	<-q.conn.quic.signalc
 	for range q.conn.quic.blockedc {
 		// Wait for the handshake goroutine to return.
 	}
@@ -181,21 +186,29 @@ func (q *UQUICConn) ConnectionState() ConnectionState {
 // Server connections may delay setting the transport parameters until after
 // receiving the client's transport parameters. See QUICTransportParametersRequired.
 func (q *UQUICConn) SetTransportParameters(params []byte) {
-	if params == nil {
-		params = []byte{}
-	}
-	q.conn.quic.transportParams = params // this won't be used for building ClientHello when using a preset
-
-	// // instead, we set the transport parameters hold by the ClientHello
-	// for _, ext := range q.conn.Extensions {
-	// 	if qtp, ok := ext.(*QUICTransportParametersExtension); ok {
-	// 		qtp.TransportParametersExtData = params
-	// 	}
-	// }
+	// Keep an owned, non-nil slice, including when the caller explicitly sets
+	// empty parameters. A nil slice in quicState means they have not been set.
+	q.conn.quic.transportParams = append([]byte{}, params...)
+	q.syncTransportParameters()
 
 	if q.conn.quic.started {
 		<-q.conn.quic.signalc
 		<-q.conn.quic.blockedc
+	}
+}
+
+// syncTransportParameters updates the active preset, not the caller's spec,
+// which ApplyPreset clones. Retain the caller's exact encoding and ordering,
+// including GREASE, and replace any previously cached extension encoding.
+func (q *UQUICConn) syncTransportParameters() {
+	params := q.conn.quic.transportParams
+	if params == nil {
+		return // Preserve preset parameters until the caller explicitly sets them.
+	}
+	for _, ext := range q.conn.Extensions {
+		if qtp, ok := ext.(*QUICTransportParametersExtension); ok {
+			qtp.marshalResult = append([]byte{}, params...)
+		}
 	}
 }
 
