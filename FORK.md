@@ -17,6 +17,11 @@ limited to custom QUIC compatibility and reviewed Go TLS security backports:
   ClientHello extension after preset cloning, without sharing mutable presets.
 - Validate ECH outer-extension references using the exact Go 1.27.2 fix
   described below; retain its deterministic regression tests.
+- Propagate cancellation while a QUIC client is paused on a session-resume
+  event, and run custom ClientHello construction errors through the common
+  handshake cleanup. Forward a terminal `QUICErrorEvent` exactly once, using
+  the standard QUIC connection's event protocol. These changes prevent
+  `Start`, event draining, or `Close` from stranding handshake goroutines.
 
 No cipher or certificate-verification policy is weakened. These corrections do
 not prove browser equivalence, passive indistinguishability, or new H3 session

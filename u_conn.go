@@ -359,13 +359,15 @@ func (c *UConn) handshakeContext(ctx context.Context) (ret error) {
 
 	// [uTLS section begins]
 	if c.isClient {
-		err := c.BuildHandshakeState()
-		if err != nil {
-			return err
-		}
+		// Building a custom hello can pause for QUICResumeSession. A canceled
+		// pause must use the same error and channel cleanup as handshakeFn;
+		// returning here would strand Start, NextEvent, or Close forever.
+		c.handshakeErr = c.BuildHandshakeState()
 	}
 	// [uTLS section ends]
-	c.handshakeErr = c.handshakeFn(handshakeCtx)
+	if c.handshakeErr == nil {
+		c.handshakeErr = c.handshakeFn(handshakeCtx)
+	}
 	if c.handshakeErr == nil {
 		c.handshakes++
 	} else {
